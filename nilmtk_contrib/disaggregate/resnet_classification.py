@@ -8,9 +8,7 @@ import tensorflow as tf
 from keras import Model
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Layer, Conv1D, Dense, Dropout, Flatten, Input, Multiply, \
-    Activation, Add
-from keras.layers.convolutional import ZeroPadding1D, MaxPooling1D
-from keras.layers.normalization.batch_normalization import BatchNormalization
+    Activation, Add, ZeroPadding1D, MaxPooling1D, BatchNormalization
 from keras.losses import BinaryCrossentropy, MeanSquaredError
 from keras.optimizers import SGD
 from nilmtk.disaggregate import Disaggregator
@@ -251,7 +249,7 @@ class ResNet_classification(Disaggregator):
                     sum_arr[i] = sum_arr[i] / counts_arr[i]
 
                 prediction = (self.appliance_params[appliance]['min'] + (sum_arr * (
-                            self.appliance_params[appliance]['max'] - self.appliance_params[appliance]['min'])))
+                        self.appliance_params[appliance]['max'] - self.appliance_params[appliance]['min'])))
 
                 l = self.sequence_length
                 n = len(prediction_classification) + l - 1

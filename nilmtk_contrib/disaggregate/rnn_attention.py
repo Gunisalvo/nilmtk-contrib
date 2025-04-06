@@ -7,8 +7,7 @@ import keras.backend as K
 import numpy as np
 import pandas as pd
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Conv1D, Dense, Bidirectional, LSTM
-from keras.layers import Layer
+from keras.layers import Conv1D, Dense, Bidirectional, LSTM, Layer
 from keras.models import Sequential
 from nilmtk.disaggregate import Disaggregator
 from sklearn.model_selection import train_test_split

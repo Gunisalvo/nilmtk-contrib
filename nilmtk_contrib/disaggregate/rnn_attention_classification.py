@@ -7,8 +7,7 @@ import pandas as pd
 import tensorflow as tf
 from keras import Model
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Conv1D, Dense, Flatten, Bidirectional, LSTM, Input, Multiply, Activation, Add
-from keras.layers import Layer
+from keras.layers import Layer, Conv1D, Dense, Flatten, Bidirectional, LSTM, Input, Multiply, Activation, Add
 from keras.losses import BinaryCrossentropy, MeanSquaredError
 from keras.optimizers import SGD
 from nilmtk.disaggregate import Disaggregator

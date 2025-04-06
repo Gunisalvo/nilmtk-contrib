@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Layer, Conv1D, Dense, Dropout, Flatten, Add, BatchNormalization
-from keras.layers import ZeroPadding1D, MaxPooling1D, Activation
+from keras.layers import Layer, Conv1D, Dense, Dropout, Flatten, Add, BatchNormalization, ZeroPadding1D, MaxPooling1D, \
+    Activation
 from keras.models import Sequential
 from nilmtk.disaggregate import Disaggregator
 from sklearn.model_selection import train_test_split
