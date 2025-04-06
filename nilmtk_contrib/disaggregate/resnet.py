@@ -7,8 +7,7 @@ import pandas as pd
 import tensorflow as tf
 from keras.callbacks import ModelCheckpoint
 from keras.layers import Layer, Conv1D, Dense, Dropout, Flatten, Add, BatchNormalization
-from keras.layers import ZeroPadding1D, MaxPooling1D
-from keras.layers.core import Activation
+from keras.layers import ZeroPadding1D, MaxPooling1D, Activation
 from keras.models import Sequential
 from nilmtk.disaggregate import Disaggregator
 from sklearn.model_selection import train_test_split
@@ -221,7 +220,7 @@ class ResNet(Disaggregator):
 
                 #################
                 prediction = self.appliance_params[appliance]['mean'] + (
-                            sum_arr * self.appliance_params[appliance]['std'])
+                        sum_arr * self.appliance_params[appliance]['std'])
                 valid_predictions = prediction.flatten()
                 valid_predictions = np.where(valid_predictions > 0, valid_predictions, 0)
                 df = pd.Series(valid_predictions)
