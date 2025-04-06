@@ -1,37 +1,37 @@
 from __future__ import print_function, division
-from warnings import warn
-from nilmtk.disaggregate import Disaggregator
-from keras.layers import Conv1D, Dense, Dropout, Reshape, Flatten, Bidirectional, LSTM
-from keras.layers import Layer
-import os
-import pickle
-import pandas as pd
-import numpy as np
-from collections import OrderedDict
-from keras.optimizers import SGD
-from keras.models import Sequential, load_model
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from keras.callbacks import ModelCheckpoint
-import keras.backend as K
-import tensorflow as tf
+
 import random
-import sys
+from collections import OrderedDict
+
+import keras.backend as K
+import numpy as np
+import pandas as pd
+from keras.callbacks import ModelCheckpoint
+from keras.layers import Conv1D, Dense, Bidirectional, LSTM
+from keras.layers import Layer
+from keras.models import Sequential
+from nilmtk.disaggregate import Disaggregator
+from sklearn.model_selection import train_test_split
+
 random.seed(10)
 np.random.seed(10)
 import tensorflow as tf
-gpus=tf.config.experimental.list_physical_devices("GPU")
+
+gpus = tf.config.experimental.list_physical_devices("GPU")
 for gpu in gpus:
-    tf.config.experimental.set_memory_growth(gpu,True)
-    
+    tf.config.experimental.set_memory_growth(gpu, True)
+
+
 class SequenceLengthError(Exception):
     pass
+
 
 class ApplianceNotFoundError(Exception):
     pass
 
-#This part of the code is inspired from:
-#https://github.com/antoniosudoso/attention-nilm
+
+# This part of the code is inspired from:
+# https://github.com/antoniosudoso/attention-nilm
 
 class AttentionLayer(Layer):
 
@@ -52,10 +52,11 @@ class AttentionLayer(Layer):
     def get_config(self):
         config = super().get_config().copy()
         config.update({
-            'W'       : self.W,
-            'V'       : self.V,
+            'W': self.W,
+            'V': self.V,
         })
         return config
+
 
 class RNN_attention(Disaggregator):
 
@@ -66,24 +67,24 @@ class RNN_attention(Disaggregator):
 
         self.MODEL_NAME = "RNN_attention"
         self.models = OrderedDict()
-        self.chunk_wise_training = params.get('chunk_wise_training',False)
-        self.sequence_length = params.get('sequence_length',19)
-        self.n_epochs = params.get('n_epochs', 10 )
-        self.batch_size = params.get('batch_size',512)
-        self.load_model_path=params.get('load_model_path',None)
-        self.appliance_params = params.get('appliance_params',{})
-        self.mains_mean = params.get('mains_mean',1800)
-        self.mains_std = params.get('mains_std',600)
-        if self.sequence_length%2==0:
-            print ("Sequence length should be odd!")
+        self.chunk_wise_training = params.get('chunk_wise_training', False)
+        self.sequence_length = params.get('sequence_length', 19)
+        self.n_epochs = params.get('n_epochs', 10)
+        self.batch_size = params.get('batch_size', 512)
+        self.load_model_path = params.get('load_model_path', None)
+        self.appliance_params = params.get('appliance_params', {})
+        self.mains_mean = params.get('mains_mean', 1800)
+        self.mains_std = params.get('mains_std', 600)
+        if self.sequence_length % 2 == 0:
+            print("Sequence length should be odd!")
             raise (SequenceLengthError)
 
-    def partial_fit(self,train_main,train_appliances,do_preprocessing=True,
-            **load_kwargs):
+    def partial_fit(self, train_main, train_appliances, do_preprocessing=True,
+                    **load_kwargs):
 
         # If no appliance wise parameters are provided, then copmute them using the first chunk
         if len(self.appliance_params) == 0:
-            self.set_appliance_params(train_appliances)  
+            self.set_appliance_params(train_appliances)
 
         print("...............RNN_attention partial_fit running...............")
         # Do the pre-processing, such as  windowing and normalizing
@@ -92,13 +93,13 @@ class RNN_attention(Disaggregator):
             train_main, train_appliances = self.call_preprocessing(
                 train_main, train_appliances, 'train')
 
-        train_main = pd.concat(train_main,axis=0)
-        train_main = train_main.values.reshape((-1,self.sequence_length,1))
-        
+        train_main = pd.concat(train_main, axis=0)
+        train_main = train_main.values.reshape((-1, self.sequence_length, 1))
+
         new_train_appliances = []
         for app_name, app_df in train_appliances:
-            app_df = pd.concat(app_df,axis=0)
-            app_df_values = app_df.values.reshape((-1,1))
+            app_df = pd.concat(app_df, axis=0)
+            app_df_values = app_df.values.reshape((-1, 1))
             new_train_appliances.append((app_name, app_df_values))
         train_appliances = new_train_appliances
 
@@ -116,13 +117,15 @@ class RNN_attention(Disaggregator):
                 # Sometimes chunks can be empty after dropping NANS
                 if len(train_main) > 10:
                     # Do validation when you have sufficient samples
-                    filepath = 'RNN_attention-temp-weights-'+str(random.randint(0,100000))+'.h5'
-                    checkpoint = ModelCheckpoint(filepath,monitor='val_loss',verbose=1,save_best_only=True,mode='min')
-                    train_x, v_x, train_y, v_y = train_test_split(train_main, power, test_size=.15,random_state=10)
-                    model.fit(train_x,train_y,validation_data=(v_x,v_y),epochs=self.n_epochs,callbacks=[checkpoint],batch_size=self.batch_size)
+                    filepath = 'RNN_attention-temp-weights-' + str(random.randint(0, 100000)) + '.h5'
+                    checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, save_best_only=True,
+                                                 mode='min')
+                    train_x, v_x, train_y, v_y = train_test_split(train_main, power, test_size=.15, random_state=10)
+                    model.fit(train_x, train_y, validation_data=(v_x, v_y), epochs=self.n_epochs,
+                              callbacks=[checkpoint], batch_size=self.batch_size)
                     model.load_weights(filepath)
 
-    def disaggregate_chunk(self,test_main_list,model=None,do_preprocessing=True):
+    def disaggregate_chunk(self, test_main_list, model=None, do_preprocessing=True):
 
         if model is not None:
             self.models = model
@@ -139,8 +142,9 @@ class RNN_attention(Disaggregator):
             test_main = test_main.reshape((-1, self.sequence_length, 1))
             disggregation_dict = {}
             for appliance in self.models:
-                prediction = self.models[appliance].predict(test_main,batch_size=self.batch_size)
-                prediction = self.appliance_params[appliance]['mean'] + prediction * self.appliance_params[appliance]['std']
+                prediction = self.models[appliance].predict(test_main, batch_size=self.batch_size)
+                prediction = self.appliance_params[appliance]['mean'] + prediction * self.appliance_params[appliance][
+                    'std']
                 valid_predictions = prediction.flatten()
                 valid_predictions = np.where(valid_predictions > 0, valid_predictions, 0)
                 df = pd.Series(valid_predictions)
@@ -155,13 +159,13 @@ class RNN_attention(Disaggregator):
         model = Sequential()
 
         # 1D Conv
-        model.add(Conv1D(16,4,activation="linear",input_shape=(self.sequence_length,1),padding="same",strides=1))
+        model.add(Conv1D(16, 4, activation="linear", input_shape=(self.sequence_length, 1), padding="same", strides=1))
 
         # Bi-directional LSTMs and attention layer
-        model.add(Bidirectional(LSTM(128,return_sequences=True,stateful=False),merge_mode='concat'))
-        model.add(Bidirectional(LSTM(256,return_sequences=True,stateful=False),merge_mode='concat'))
+        model.add(Bidirectional(LSTM(128, return_sequences=True, stateful=False), merge_mode='concat'))
+        model.add(Bidirectional(LSTM(256, return_sequences=True, stateful=False), merge_mode='concat'))
         model.add(AttentionLayer(units=128))
-        
+
         # Fully Connected Layers
         model.add(Dense(128, activation='tanh'))
         model.add(Dense(1, activation='linear'))
@@ -178,7 +182,7 @@ class RNN_attention(Disaggregator):
                 new_mains = mains.values.flatten()
                 n = self.sequence_length
                 units_to_pad = n // 2
-                new_mains = np.pad(new_mains,(units_to_pad,units_to_pad),'constant',constant_values=(0,0))
+                new_mains = np.pad(new_mains, (units_to_pad, units_to_pad), 'constant', constant_values=(0, 0))
                 new_mains = np.array([new_mains[i:i + n] for i in range(len(new_mains) - n + 1)])
                 new_mains = (new_mains - self.mains_mean) / self.mains_std
                 mains_df_list.append(pd.DataFrame(new_mains))
@@ -189,7 +193,7 @@ class RNN_attention(Disaggregator):
                     app_mean = self.appliance_params[app_name]['mean']
                     app_std = self.appliance_params[app_name]['std']
                 else:
-                    print ("Parameters for ", app_name ," were not found!")
+                    print("Parameters for ", app_name, " were not found!")
                     raise ApplianceNotFoundError()
 
                 processed_appliance_dfs = []
@@ -197,7 +201,7 @@ class RNN_attention(Disaggregator):
                 for app_df in app_df_list:
                     new_app_readings = app_df.values.reshape((-1, 1))
                     # This is for choosing windows
-                    new_app_readings = (new_app_readings - app_mean) / app_std  
+                    new_app_readings = (new_app_readings - app_mean) / app_std
                     # Return as a list of dataframe
                     processed_appliance_dfs.append(pd.DataFrame(new_app_readings))
                 appliance_list.append((app_name, processed_appliance_dfs))
@@ -210,20 +214,19 @@ class RNN_attention(Disaggregator):
                 new_mains = mains.values.flatten()
                 n = self.sequence_length
                 units_to_pad = n // 2
-                new_mains = np.pad(new_mains,(units_to_pad,units_to_pad),'constant',constant_values=(0,0))
+                new_mains = np.pad(new_mains, (units_to_pad, units_to_pad), 'constant', constant_values=(0, 0))
                 new_mains = np.array([new_mains[i:i + n] for i in range(len(new_mains) - n + 1)])
                 new_mains = (new_mains - self.mains_mean) / self.mains_std
                 mains_df_list.append(pd.DataFrame(new_mains))
             return mains_df_list
 
-    def set_appliance_params(self,train_appliances):
+    def set_appliance_params(self, train_appliances):
         # Find the parameters using the first
-        for (app_name,df_list) in train_appliances:
-            l = np.array(pd.concat(df_list,axis=0))
+        for (app_name, df_list) in train_appliances:
+            l = np.array(pd.concat(df_list, axis=0))
             app_mean = np.mean(l)
             app_std = np.std(l)
-            if app_std<1:
+            if app_std < 1:
                 app_std = 100
-            self.appliance_params.update({app_name:{'mean':app_mean,'std':app_std}})
-        print (self.appliance_params)
- 
+            self.appliance_params.update({app_name: {'mean': app_mean, 'std': app_std}})
+        print(self.appliance_params)
