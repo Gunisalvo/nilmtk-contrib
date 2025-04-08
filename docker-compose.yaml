@@ -1,0 +1,13 @@
+services:
+    nilmtk-contrib:
+        build: .
+        ports:
+            - "8080:8080"
+        environment:
+            PYTHONPATH: /app/nilmtk-contrib
+        volumes:
+            - ./:/app/nilmtk-contrib
+        entrypoint:
+            - /bin/bash
+            - -c
+            - jupyter server --allow-root --ip 0.0.0.0 --port 8080 --notebook-dir='/app/nilmtk-contrib'
